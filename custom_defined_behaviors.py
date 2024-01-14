@@ -1,37 +1,58 @@
-# Updated existing behaviors
-existing_behaviors = {
-    "bspc_del": {
-        "compatible": "zmk,behavior-mod-morph",
-        "bindings": ["&kp BACKSPACE", "&kp DELETE"],
-        "mods": "<(MOD_LSFT|MOD_RSFT)>",
-        "keep-mods": "<0>"
-    },
-    "td_caps_lshift": {
-        "compatible": "zmk,behavior-tap-dance",
-        "tapping-term-ms": "<200>",
-        "bindings": ["&kp LSHIFT", "&caps_word"]
-    },
-    "td_caps_rshift": {
-        "compatible": "zmk,behavior-tap-dance",
-        "tapping-term-ms": "<200>",
-        "bindings": ["&kp RSHIFT", "&caps_word"]
-    },
-    "td_lgui_enter": {
-        "compatible": "zmk,behavior-tap-dance",
-        "tapping-term-ms": "<200>",
-        "bindings": ["&kp LGUI", "&kp ENTER"]
-    },
-    "behavior_caps_word": {
-        "continue-list": [
-            "UNDERSCORE",
-            "BACKSPACE", "DELETE",
-            "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "N0"
-        ]
-    }
-}
+# Jinja2 template for generating ZMK configuration
+
+from jinja2 import Template
+
+# Template for the behaviors configuration
+template_string = """
+behaviors {
+    bspc_del: backspace_delete {
+        compatible = "zmk,behavior-mod-morph";
+        #binding-cells = <0>;
+        bindings = <&kp BACKSPACE>, <&kp DELETE>;
+        mods = <(MOD_LSFT|MOD_RSFT)>;
+        keep-mods = <0>;
+    };
+    td_caps_lshift: tap_dance_caps_lshift {
+        compatible = "zmk,behavior-tap-dance";
+        #binding-cells = <0>;
+        tapping-term-ms = <200>;
+        bindings = <&kp LSHIFT>, <&caps_word>;
+    };
+    td_caps_rshift: tap_dance_caps_rshift {
+        compatible = "zmk,behavior-tap-dance";
+        #binding-cells = <0>;
+        tapping-term-ms = <200>;
+        bindings = <&kp RSHIFT>, <&caps_word>;
+    };
+    td_lgui_enter: tap_dance_lgui_enter {
+        compatible = "zmk,behavior-tap-dance";
+        #binding-cells = <0>;
+        tapping-term-ms = <200>;
+        bindings = <&kp LGUI>, <&kp ENTER>;
+    };
+    behavior_caps_word {
+        continue-list = <
+            UNDERSCORE
+            BACKSPACE DELETE
+            N1 N2 N3 N4 N5 N6 N7 N8 N9 N0
+        >;
+    };
+    {% for tap_key, hold_key in keys %}
+    mt_{{ tap_key|lower }}_{{ hold_key|lower }}: mod_tap_{{ tap_key|lower }}_{{ hold_key|lower }} {
+        compatible = "zmk,behavior-mod-tap";
+        #binding-cells = <0>;
+        label = "{{ tap_key }} / {{ hold_key }}";
+        tapping-term-ms = <200>;
+        mod = <MOD_LSFT>;
+        tap = <{{ tap_key }}>;
+        hold = <{{ hold_key }}>;
+    };
+    {% endfor %}
+};
+"""
 
 # Define the new keys for mod-tap behaviors
-new_keys = [
+keys = [
     ('N1', 'EXCL'),
     ('N2', 'AT'),
     ('N3', 'HASH'),
@@ -55,33 +76,9 @@ new_keys = [
     ('GRAVE', 'TILDE')
 ]
 
-# Generate the configuration script
-def generate_config_script(existing_behaviors, new_keys):
-    config_script = "behaviors {\n"
-    for behavior, details in existing_behaviors.items():
-        config_script += f"    {behavior}: {behavior.replace('_', ' ')} {{\n"
-        for key, value in details.items():
-            if isinstance(value, list):
-                config_script += f"        {key} = <" + ", ".join(value) + ">;\n"
-            else:
-                config_script += f"        {key} = {value};\n"
-        config_script += "    };\n"
-    
-    for tap_key, hold_key in new_keys:
-        behavior_name = f"mt_{tap_key.lower()}_{hold_key.lower()}"
-        config_script += f"    {behavior_name}: mod_tap_{tap_key.lower()}_{hold_key.lower()} {{\n"
-        config_script += "        compatible = \"zmk,behavior-mod-tap\";\n"
-        config_script += f"        label = \"{tap_key} / {hold_key}\";\n"
-        config_script += "        tapping-term-ms = <200>;\n"
-        config_script += "        mod = <MOD_LSFT>;\n"
-        config_script += f"        tap = <{tap_key}>;\n"
-        config_script += f"        hold = <{hold_key}>;\n"
-        config_script += "    };\n"
+# Render the template with the keys
+template = Template(template_string)
+config_script = template.render(keys=keys)
 
-    config_script += "};"
-    return config_script
-
-# Generate and print the configuration script
-config_script = generate_config_script(existing_behaviors, new_keys)
 print(config_script)
 
